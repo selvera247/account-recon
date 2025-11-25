@@ -1,0 +1,8 @@
+Source,TranID,Date,Entity_Name,Item_or_Account,Amount,Subsidiary,Revenue_Arrangement,Currency,Recognition_Status
+AR Invoice,INV-20251189,2025-11-15,Acme Corp,Enterprise Annual Plan,240000.00,Parent Company,RA-1189,USD,Partially Recognized
+Revenue Recognition,REVREC-20251189-001,2025-11-30,Acme Corp,Enterprise Annual Plan,-20000.00,Parent Company,RA-1189,USD,Recognized This Period
+Bank Deposit,DEP-20251122,2025-11-22,,Bank - Operating - USD,187423.00,Parent Company,,USD,
+AR Invoice,INV-20251201,2025-11-28,StartupXYZ,Pro Monthly Plan,1200.00,Parent Company,RA-1201,USD,Fully Deferred
+Revenue Recognition,REVREC-20251201-001,2025-11-30,StartupXYZ,Pro Monthly Plan,-100.00,Parent Company,RA-1201,USD,Recognized This Period
+Bank Fee,,2025-11-30,,Bank Fees,45.00,Parent Company,,USD,
+AR Invoice,INV-20251234,2025-11-10,MegaCorp,Add-on Usage,8742.50,Parent Company,RA-1234,USD,Fully Recognized
