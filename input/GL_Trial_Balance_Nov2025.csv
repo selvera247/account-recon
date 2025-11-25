@@ -1,0 +1,8 @@
+Account_Number,Account_Name,Subsidiary,Department,Class,Location,Balance_Nov302025,Currency
+1010,Bank - Operating - USD,Parent Company,,,USD,1248392.45,USD
+1200,Accounts Receivable,Parent Company,,,USD,892451.22,USD
+2200,Deferred Revenue - Current,Parent Company,,,USD,-3842110.00,USD
+2210,Deferred Revenue - Long Term,Parent Company,,,USD,-1105880.00,USD
+4020,Subscription Revenue,Parent Company,Sales - Enterprise,,USD,-4512300.00,USD
+4030,Professional Services Revenue,Parent Company,Services,,USD,-187500.00,USD
+5040,Bank Fees,Parent Company,,,USD,2840.00,USD
