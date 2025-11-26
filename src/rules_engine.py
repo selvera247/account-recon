@@ -1,11 +1,9 @@
 import pandas as pd
 
 def apply_reconciliation_rules(gl_df, sub_df):
-    # Normalize keys
     gl_df = gl_df.copy()
     sub_df = sub_df.copy()
 
-    # Map subledger to GL accounts (customize per company)
     account_mapping = {
         "Deferred Revenue - Current": "2200",
         "Deferred Revenue - Long Term": "2210",
@@ -16,7 +14,12 @@ def apply_reconciliation_rules(gl_df, sub_df):
     results = []
 
     for acct_name, acct_num in account_mapping.items():
-        gl_bal = gl_df[gl_df['Account_Number'] == acct_num]['Balance_Nov302025'].iloc[0]
+        # Safe lookup with default value
+        gl_match = gl_df[gl_df['Account_Number'] == acct_num]['Balance_Nov302025']
+        if gl_match.empty:
+            print(f"Warning: Account {acct_num} ({acct_name}) not found in GL")
+            continue
+        gl_bal = gl_match.iloc[0]
 
         if "Deferred" in acct_name:
             sub_bal = sub_df[sub_df['Recognition_Status'].str.contains('Deferred|Partially', na=False)]['Amount'].sum()
@@ -27,15 +30,15 @@ def apply_reconciliation_rules(gl_df, sub_df):
         else:
             sub_bal = 0
 
-        variance = abs(gl_bal - sub_bal)
-        tolerance = abs(gl_bal) * 0.005  # 0.5% tolerance
-        status = "Matched" if variance <= max(tolerance, 10) else "Exception"
+        variance = gl_bal - sub_bal
+        tolerance = abs(gl_bal) * 0.005
+        status = "Matched" if abs(variance) <= max(tolerance, 10) else "Exception"
 
         results.append({
             "Account": acct_name,
             "GL_Balance": gl_bal,
             "Subledger_Balance": sub_bal,
-            "Variance": gl_bal - sub_bal,
+            "Variance": variance,
             "Status": status
         })
 
