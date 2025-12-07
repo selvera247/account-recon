@@ -1,3 +1,24 @@
+Timestamp
+Request Title
+Request Type
+Requestor Name
+Requestor Email
+Requestor Team
+Needed By Date
+Business Question
+Data Sources
+Other Data Sources
+Key Metrics
+Segments / Filters
+Expected Output
+Urgency
+Business Impact
+Audience
+Frequency
+Existing Analysis
+Success Criteria
+Additional Notes
+Attachment Note
 AI Summary
 AI Tags
 AI Priority Score
