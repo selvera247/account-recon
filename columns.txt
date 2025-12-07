@@ -30,3 +30,137 @@ Final Effort Actual
 Final Cycle Time Days
 Final Outcome Notes
 Primary Systems Touched
+
+// Replace this with your actual Sheet ID
+// (the long ID in the URL between /d/ and /edit)
+const SHEET_ID = 'PUT_YOUR_SHEET_ID_HERE';
+
+// Name of the tab that stores intake requests
+const INTAKE_SHEET_NAME = 'Intake';
+
+function doPost(e) {
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(INTAKE_SHEET_NAME);
+
+    // Safely grab parameters
+    const p = e && e.parameter ? e.parameter : {};
+
+    // Handle multi-select checkboxes / radio groups
+    // e.parameters will give arrays even for single-select if multiple values exist
+    const dataSources = normalizeMulti(e, 'data_sources');
+    const audience    = normalizeMulti(e, 'audience');
+
+    // If you have only one radio selected, it comes through as a single value
+    const expectedOutput = p.expected_output || '';
+
+    // Attachment handling:
+    // The plain HTML form won't actually upload files into Apps Script easily
+    // so we just note that the user indicated an attachment.
+    const attachmentNote = ''; // or something like: 'See email / shared location'
+
+    const timestamp = new Date();
+
+    // Build row in EXACT order of your headers:
+    // Timestamp
+    // Request Title
+    // Request Type
+    // Requestor Name
+    // Requestor Email
+    // Requestor Team
+    // Needed By Date
+    // Business Question
+    // Data Sources
+    // Other Data Sources
+    // Key Metrics
+    // Segments / Filters
+    // Expected Output
+    // Urgency
+    // Business Impact
+    // Audience
+    // Frequency
+    // Existing Analysis
+    // Success Criteria
+    // Additional Notes
+    // Attachment Note
+    // AI Summary
+    // AI Tags
+    // AI Priority Score
+    // AI Effort
+    // AI Risk Notes
+    // Status
+    // Final Impact Rating
+    // Final Effort Actual
+    // Final Cycle Time Days
+    // Final Outcome Notes
+    // Primary Systems Touched
+
+    const row = [
+      timestamp,
+      p.request_title || '',
+      p.request_type || '',
+      p.requestor_name || '',
+      p.requestor_email || '',
+      p.requestor_team || '',
+      p.needed_by_date || '',
+      p.business_question || '',
+      dataSources,
+      p.data_sources_other || '',
+      p.key_metrics || '',
+      p.segments_filters || '',
+      expectedOutput,
+      p.urgency || '',
+      p.business_impact || '',
+      audience,
+      p.frequency || '',
+      p.existing_analysis || '',
+      p.success_criteria || '',
+      p.additional_notes || '',
+      attachmentNote,
+
+      // AI / status columns start empty; Python will fill these later
+      '', // AI Summary
+      '', // AI Tags
+      '', // AI Priority Score
+      '', // AI Effort
+      '', // AI Risk Notes
+      '', // Status
+      '', // Final Impact Rating
+      '', // Final Effort Actual
+      '', // Final Cycle Time Days
+      '', // Final Outcome Notes
+      ''  // Primary Systems Touched
+    ];
+
+    sheet.appendRow(row);
+
+    // Simple "thank you" response to the browser
+    return HtmlService.createHtmlOutput(
+      '<p>Thank you, your data analytics request has been submitted.</p>'
+    );
+
+  } catch (err) {
+    Logger.log('Error in doPost: ' + err);
+
+    return HtmlService.createHtmlOutput(
+      '<p>There was an error submitting your request. Please contact the analytics team.</p>'
+    );
+  }
+}
+
+
+/**
+ * Normalize multi-select fields (checkbox groups) so we get a clean
+ * comma-separated string, whether there is 0, 1, or many values.
+ */
+function normalizeMulti(e, fieldName) {
+  if (!e || !e.parameters || !e.parameters[fieldName]) {
+    return '';
+  }
+  const raw = e.parameters[fieldName];
+
+  if (Array.isArray(raw)) {
+    return raw.join(', ');
+  }
+
+  return String(raw);
+}
