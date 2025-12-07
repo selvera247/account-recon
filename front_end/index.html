@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Analytics Request Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: #efefef;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #e60023;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #5f5f5f;
+            line-height: 1.6;
+        }
+
+        .progress-container {
+            background: #fff;
+            border-radius: 24px;
+            height: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .progress-bar {
+            background: #e60023;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 24px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 32px;
+            border-radius: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+            animation: fadeInUp 0.6s ease both;
+            position: relative;
+        }
+
+        .form-section:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .form-section:nth-child(1) { animation-delay: 0.1s; }
+        .form-section:nth-child(2) { animation-delay: 0.2s; }
+        .form-section:nth-child(3) { animation-delay: 0.3s; }
+        .form-section:nth-child(4) { animation-delay: 0.4s; }
+        .form-section:nth-child(5) { animation-delay: 0.5s; }
+
+        .pin-decoration {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #e60023;
+            border-radius: 50%;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        h2 {
+            color: #211922;
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-number {
+            background: #e60023;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #211922;
+            font-size: 0.95rem;
+        }
+
+        .required {
+            color: #e60023;
+            margin-left: 4px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="date"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #cdcdcd;
+            border-radius: 16px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: white;
+            font-family: inherit;
+            color: #211922;
+        }
+
+        input[type="text"]:hover,
+        input[type="email"]:hover,
+        input[type="date"]:hover,
+        textarea:hover,
+        select:hover {
+            border-color: #767676;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="date"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #e60023;
+            box-shadow: 0 0 0 4px rgba(230, 0, 35, 0.08);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .checkbox-group, .radio-group {
+            background: #f7f7f7;
+            border-radius: 16px;
+            padding: 16px;
+            border: 2px solid #efefef;
+        }
+
+        .checkbox-item, .radio-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-item:hover, .radio-item:hover {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        input[type="checkbox"],
+        input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #e60023;
+        }
+
+        input[type="file"] {
+            padding: 16px;
+            border: 2px dashed #cdcdcd;
+            border-radius: 16px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f7f7f7;
+            font-size: 0.95rem;
+            color: #211922;
+        }
+
+        input[type="file"]:hover {
+            border-color: #e60023;
+            background: white;
+        }
+
+        .submit-container {
+            text-align: center;
+            margin-top: 32px;
+        }
+
+        button[type="submit"] {
+            background: #e60023;
+            color: white;
+            padding: 16px 48px;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(230, 0, 35, 0.25);
+        }
+
+        button[type="submit"]:hover {
+            background: #ad081b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230, 0, 35, 0.35);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .helper-text {
+            font-size: 0.875rem;
+            color: #767676;
+            margin-top: 6px;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23211922' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        .info-banner {
+            background: #fff4e6;
+            border-left: 4px solid #e60023;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            color: #211922;
+        }
+
+        .info-banner strong {
+            color: #e60023;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .form-section {
+                padding: 24px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Data Analytics Request</h1>
+            <p>Submit requests for analytics support, dashboards, data transformations, and ad-hoc analysis</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <!-- Replace YOUR_WEB_APP_URL_HERE with your Apps Script Web App URL -->
+        <form action="YOUR_WEB_APP_URL_HERE" method="POST" id="dataForm">
+            
+            <!-- Section 1: Request Details -->
+            <div class="form-section">
+                <div class="pin-decoration"></div>
+                <h2><span class="section-number">1</span> Request Details</h2>
+                
+                <div class="info-banner">
+                    <strong>Note:</strong> We support both strategic analytics capabilities build-out and ad-hoc data requests from the Revenue Organization.
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="request_title">Request Title<span class="required">*</span></label>
+                        <input type="text" id="request_title" name="request_title" placeholder="Brief, descriptive title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="request_type">Request Type<span class="required">*</span></label>
+                        <select id="request_type" name="request_type" required>
+                            <option value="">Select request type</option>
+                            <option value="Ad-hoc Analysis">Ad-hoc Analysis</option>
+                            <option value="Dashboard Build">Dashboard Build</option>
+                            <option value="Data Transformation">Data Transformation</option>
+                            <option value="Analytics Capability">Analytics Capability Build-out</option>
+                            <option value="Reporting">Reporting</option>
+                            <option value="Data Quality">Data Quality Issue</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="requestor_name">Requestor Name<span class="required">*</span></label>
+                        <input type="text" id="requestor_name" name="requestor_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="requestor_email">Requestor Email<span class="required">*</span></label>
+                        <input type="email" id="requestor_email" name="requestor_email" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="requestor_team">Requestor Team<span class="required">*</span></label>
+                        <select id="requestor_team" name="requestor_team" required>
+                            <option value="">Select team</option>
+                            <option value="Revenue Operations">Revenue Operations</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Customer Success">Customer Success</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Product">Product</option>
+                            <option value="Executive">Executive</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="needed_by_date">Needed By Date</label>
+                        <input type="date" id="needed_by_date" name="needed_by_date">
+                        <p class="helper-text">Leave blank if not time-sensitive</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="business_question">Business Question / Objective<span class="required">*</span></label>
+                    <textarea id="business_question" name="business_question" required placeholder="What business question are you trying to answer? What decision will this support?"></textarea>
+                    <p class="helper-text">Be specific about what you're trying to learn or accomplish</p>
+                </div>
+            </div>
+
+            <!-- Section 2: Data & Analysis Requirements -->
+            <div class="form-section">
+                <div class="pin-decoration"></div>
+                <h2><span class="section-number">2</span> Data & Analysis Requirements</h2>
+                
+                <div class="form-group">
+                    <label>Data Sources Needed</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_salesforce" name="data_sources" value="Salesforce">
+                            <label for="src_salesforce" style="margin: 0; font-weight: 500;">Salesforce</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_netsuite" name="data_sources" value="NetSuite">
+                            <label for="src_netsuite" style="margin: 0; font-weight: 500;">NetSuite</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_tableau" name="data_sources" value="Tableau">
+                            <label for="src_tableau" style="margin: 0; font-weight: 500;">Tableau</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_warehouse" name="data_sources" value="Data Warehouse">
+                            <label for="src_warehouse" style="margin: 0; font-weight: 500;">Data Warehouse</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_spreadsheet" name="data_sources" value="Spreadsheet">
+                            <label for="src_spreadsheet" style="margin: 0; font-weight: 500;">Spreadsheet / CSV</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="src_other" name="data_sources" value="Other">
+                            <label for="src_other" style="margin: 0; font-weight: 500;">Other (specify below)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="data_sources_other">Other Data Sources</label>
+                    <input type="text" id="data_sources_other" name="data_sources_other" placeholder="List any other data sources needed">
+                </div>
+
+                <div class="form-group">
+                    <label for="key_metrics">Key Metrics or KPIs<span class="required">*</span></label>
+                    <textarea id="key_metrics" name="key_metrics" required placeholder="What specific metrics do you need? (e.g., revenue, conversion rate, pipeline velocity)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="segments_filters">Required Segments / Filters</label>
+                    <textarea id="segments_filters" name="segments_filters" placeholder="e.g., by region, product line, customer segment, time period"></textarea>
+                    <p class="helper-text">How should the data be sliced or grouped?</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="expected_output">Expected Output Format</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="output_dashboard" name="expected_output" value="Dashboard">
+                            <label for="output_dashboard" style="margin: 0; font-weight: 500;">Interactive Dashboard</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="output_report" name="expected_output" value="Report">
+                            <label for="output_report" style="margin: 0; font-weight: 500;">Static Report</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="output_spreadsheet" name="expected_output" value="Spreadsheet">
+                            <label for="output_spreadsheet" style="margin: 0; font-weight: 500;">Spreadsheet / Data Export</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="output_presentation" name="expected_output" value="Presentation">
+                            <label for="output_presentation" style="margin: 0; font-weight: 500;">Presentation / Slides</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="output_other" name="expected_output" value="Other">
+                            <label for="output_other" style="margin: 0; font-weight: 500;">Other</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Priority & Impact -->
+            <div class="form-section">
+                <div class="pin-decoration"></div>
+                <h2><span class="section-number">3</span> Priority & Impact</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="urgency">Urgency<span class="required">*</span></label>
+                        <select id="urgency" name="urgency" required>
+                            <option value="">Select urgency</option>
+                            <option value="Low">Low - Nice to have</option>
+                            <option value="Medium">Medium - Needed within 2-4 weeks</option>
+                            <option value="High">High - Needed within 1 week</option>
+                            <option value="Critical">Critical - Needed within 48 hours</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="business_impact">Business Impact<span class="required">*</span></label>
+                        <select id="business_impact" name="business_impact" required>
+                            <option value="">Select impact</option>
+                            <option value="Low">Low - Informational only</option>
+                            <option value="Medium">Medium - Supports decision-making</option>
+                            <option value="High">High - Drives key business decision</option>
+                            <option value="Critical">Critical - Executive-level visibility</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Who Will Use This Analysis?</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="audience_individual" name="audience" value="Individual Contributor">
+                            <label for="audience_individual" style="margin: 0; font-weight: 500;">Individual Contributor</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="audience_team" name="audience" value="Team/Department">
+                            <label for="audience_team" style="margin: 0; font-weight: 500;">Team / Department</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="audience_manager" name="audience" value="Manager/Director">
+                            <label for="audience_manager" style="margin: 0; font-weight: 500;">Manager / Director</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="audience_exec" name="audience" value="Executive">
+                            <label for="audience_exec" style="margin: 0; font-weight: 500;">Executive Leadership</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="audience_board" name="audience" value="Board">
+                            <label for="audience_board" style="margin: 0; font-weight: 500;">Board of Directors</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="frequency">Frequency of Use</label>
+                    <select id="frequency" name="frequency">
+                        <option value="">Select frequency</option>
+                        <option value="One-time">One-time request</option>
+                        <option value="Weekly">Weekly</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Ad-hoc">Ad-hoc as needed</option>
+                    </select>
+                    <p class="helper-text">Will this be recurring or a one-time analysis?</p>
+                </div>
+            </div>
+
+            <!-- Section 4: Additional Context -->
+            <div class="form-section">
+                <div class="pin-decoration"></div>
+                <h2><span class="section-number">4</span> Additional Context</h2>
+                
+                <div class="form-group">
+                    <label for="existing_analysis">Existing Analysis or Reference</label>
+                    <textarea id="existing_analysis" name="existing_analysis" placeholder="Link to any existing reports, dashboards, or similar analysis"></textarea>
+                    <p class="helper-text">Is there something similar we can build from?</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="success_criteria">Success Criteria</label>
+                    <textarea id="success_criteria" name="success_criteria" placeholder="How will you know this request was successful? What questions should it answer?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="additional_notes">Additional Notes</label>
+                    <textarea id="additional_notes" name="additional_notes" placeholder="Any other context, constraints, or requirements"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="attachments">Attachments (Optional)</label>
+                    <input type="file" id="attachments" name="attachments" multiple accept=".pdf,.xlsx,.csv,.pptx,.docx,.png,.jpg">
+                    <p class="helper-text">
+                        Attachments are not stored in Google Sheets yet, but you can still upload them here for future enhancement.
+                    </p>
+                </div>
+            </div>
+
+            <div class="submit-container">
+                <button type="submit">Submit Data Request</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('dataForm');
+        const progressBar = document.getElementById('progressBar');
+        const requiredInputs = form.querySelectorAll('[required]');
+
+        function updateProgress() {
+            let filled = 0;
+            requiredInputs.forEach(input => {
+                if (input.type === 'radio') {
+                    const radioName = input.name;
+                    if (form.querySelector(`input[name="${radioName}"]:checked`)) {
+                        filled++;
+                    }
+                } else if (input.value.trim() !== '') {
+                    filled++;
+                }
+            });
+            
+            const radioGroups = new Set();
+            requiredInputs.forEach(input => {
+                if (input.type === 'radio') {
+                    radioGroups.add(input.name);
+                }
+            });
+            
+            const uniqueRequired = requiredInputs.length - radioGroups.size + (radioGroups.size > 0 ? radioGroups.size : 0);
+            const percentage = (filled / uniqueRequired) * 100;
+            progressBar.style.width = percentage + '%';
+        }
+
+        requiredInputs.forEach(input => {
+            input.addEventListener('input', updateProgress);
+            input.addEventListener('change', updateProgress);
+        });
+
+        form.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', updateProgress);
+        });
+
+        form.addEventListener('submit', () => {
+            console.log('Data analytics request submitted');
+            // Do NOT prevent default; we want the POST to go to Apps Script
+        });
+
+        updateProgress();
+    </script>
+</body>
+</html>
