@@ -1,0 +1,17 @@
+# Python venv
+venv/
+.env
+*.env
+
+# API Keys / Credentials
+service_account.json
+
+# Embedding cache
+embeddings_cache.json
+
+# macOS / Windows junk
+.DS_Store
+Thumbs.db
+
+# VS Code settings (optional)
+.vscode/
