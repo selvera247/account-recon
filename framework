@@ -1,0 +1,480 @@
+Awesome, zooming in on Accounts is exactly the right move. This dimension quietly controls everything in Finance.
+
+I’ll give you:
+	1.	A general framework for dim_account (what questions to ask + design rules)
+	2.	A concrete data model across RAW → STG → HUB
+	3.	A Type 2 SCD pattern you can reuse
+	4.	An end-to-end example (Salesforce + Oracle) so you can “see the movie”
+
+⸻
+
+1️⃣ Account Framework – What You Decide Up Front
+
+When you say “Account” in a Financial Data Hub, decide:
+	1.	What is the grain of an account?
+	•	Is it:
+	•	A Salesforce Account?
+	•	An Oracle Customer?
+	•	A Finance Customer that may exist in many systems?
+	•	In practice, you want:
+dim_account = Finance Customer (global), with mappings to each source system.
+	2.	How do you uniquely identify a finance customer?
+	•	Common strategies:
+	•	Tax ID + Country
+	•	Domain (for digital advertisers)
+	•	Curated mapping table owned by RevOps/Finance
+	3.	What changes matter historically?
+	•	You’ll SCD2 these:
+	•	Segment (Enterprise / Mid Market / SMB)
+	•	Region (AMER / EMEA / APAC)
+	•	Sales Owner / CSM
+	•	Payment Terms / Risk Tier
+
+That gives the backbone for your design.
+
+⸻
+
+2️⃣ Data Model – Accounts Across the Layers
+
+Let’s assume two main systems for now:
+	•	Salesforce: Account
+	•	Oracle: AR Customer / HZ_PARTIES / HZ_CUST_ACCOUNTS
+
+We’ll define:
+	•	RAW tables per system
+	•	STG tables per system
+	•	HUB:
+	•	hub.dim_account  (Type 2)
+	•	hub.xref_account_system (system IDs → account_key)
+
+⸻
+
+2.1. RAW Layer (keep it boring and faithful)
+
+Example RAW Tables
+
+CREATE TABLE raw_salesforce.account (
+    id                    NVARCHAR(50),
+    name                  NVARCHAR(255),
+    parentid              NVARCHAR(50),
+    billingcountry        NVARCHAR(100),
+    industry              NVARCHAR(100),
+    type                  NVARCHAR(50),
+    ownerid               NVARCHAR(50),
+    website               NVARCHAR(255),
+    lastmodifieddate      DATETIME2,
+    inserted_utc_dt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+    batch_id              UNIQUEIDENTIFIER
+);
+
+CREATE TABLE raw_oracle.customer (
+    customer_id           NVARCHAR(50),
+    customer_name         NVARCHAR(255),
+    tax_registration_num  NVARCHAR(50),
+    country               NVARCHAR(100),
+    customer_class        NVARCHAR(100),
+    payment_terms         NVARCHAR(50),
+    salesrep_name         NVARCHAR(100),
+    last_update_date      DATETIME2,
+    inserted_utc_dt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+    batch_id              UNIQUEIDENTIFIER
+);
+
+Rules here:
+	•	Don’t overthink it. 1:1 copies.
+	•	If two batches bring different versions, you keep them all in RAW. Dedupe happens in STG.
+
+⸻
+
+2.2. STG Layer (standardization + dedupe)
+
+This is where you normalize names + types and pick the latest row per business key.
+
+Salesforce STG
+
+CREATE TABLE stg_salesforce.account (
+    sf_account_id         NVARCHAR(50) PRIMARY KEY,
+    account_name          NVARCHAR(255),
+    parent_sf_account_id  NVARCHAR(50),
+    country               NVARCHAR(100),
+    industry              NVARCHAR(100),
+    segment               NVARCHAR(50),    -- derived from type/size
+    sales_owner_name      NVARCHAR(100),
+    website               NVARCHAR(255),
+    last_modified_dt_utc  DATETIME2,
+    load_utc_dt           DATETIME2 DEFAULT SYSUTCDATETIME()
+);
+
+Oracle STG
+
+CREATE TABLE stg_oracle.customer (
+    oracle_cust_id        NVARCHAR(50) PRIMARY KEY,
+    customer_name         NVARCHAR(255),
+    tax_id                NVARCHAR(50),
+    country               NVARCHAR(100),
+    customer_class        NVARCHAR(100),
+    payment_terms         NVARCHAR(50),
+    salesrep_name         NVARCHAR(100),
+    last_modified_dt_utc  DATETIME2,
+    load_utc_dt           DATETIME2 DEFAULT SYSUTCDATETIME()
+);
+
+RAW → STG pattern (example: Salesforce)
+
+WITH ranked AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY id ORDER BY lastmodifieddate DESC) AS rn
+    FROM raw_salesforce.account
+)
+INSERT INTO stg_salesforce.account (
+    sf_account_id,
+    account_name,
+    parent_sf_account_id,
+    country,
+    industry,
+    segment,
+    sales_owner_name,
+    website,
+    last_modified_dt_utc
+)
+SELECT
+    id,
+    name,
+    parentid,
+    billingcountry,
+    industry,
+    CASE 
+        WHEN type = 'Enterprise' THEN 'Enterprise'
+        WHEN type = 'Mid-Market' THEN 'Mid Market'
+        ELSE 'SMB'
+    END AS segment,
+    ownerid,         -- can join to user table later
+    website,
+    lastmodifieddate
+FROM ranked
+WHERE rn = 1;
+
+Same concept for Oracle: pick latest per customer_id.
+
+⸻
+
+2.3. HUB – dim_account (Type 2) + cross-system mapping
+
+a) dim_account
+
+CREATE TABLE hub.dim_account (
+    account_key           INT IDENTITY PRIMARY KEY,
+
+    -- Business identifiers
+    finance_account_name  NVARCHAR(255),
+    primary_country       NVARCHAR(100),
+    tax_id                NVARCHAR(50) NULL,
+
+    -- Segmentation / ownership
+    segment               NVARCHAR(50),
+    region                NVARCHAR(50),
+    industry              NVARCHAR(100),
+    sales_owner_name      NVARCHAR(100),
+    payment_terms         NVARCHAR(50),
+
+    -- Hierarchy
+    parent_account_key    INT NULL,
+
+    -- SCD Type 2
+    is_current            BIT,
+    effective_start_dt    DATE,
+    effective_end_dt      DATE,
+
+    -- Audit
+    inserted_utc_dt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+    updated_utc_dt        DATETIME2 NULL
+);
+
+finance_account_name is your “golden” name (you can default to SF or Oracle initially, then let RevOps curate it).
+
+b) xref_account_system (system mappings)
+
+CREATE TABLE hub.xref_account_system (
+    account_key           INT,
+    source_system         NVARCHAR(50),
+    source_account_id     NVARCHAR(50),
+    is_primary            BIT,
+    inserted_utc_dt       DATETIME2 DEFAULT SYSUTCDATETIME(),
+    PRIMARY KEY (source_system, source_account_id)
+);
+
+Examples:
+
+account_key	source_system	source_account_id	is_primary
+101	SALESFORCE	001A1	1
+101	ORACLE	CUST_90001	0
+
+This is what lets you join facts coming from any system back to the same finance account.
+
+⸻
+
+3️⃣ SCD Type 2 Framework for Accounts
+
+Now the important part: how to maintain history when segment, region, sales owner, etc. change.
+
+You’ll typically:
+	1.	Build a “candidate” table/view of what the account row should look like today.
+	2.	Compare that to the current dim_account rows.
+	3.	For rows where key attributes changed → close old row and insert new row.
+
+Let’s assume your “candidate” set is a unified view combining Salesforce + Oracle:
+
+CREATE VIEW stg_unified.account AS
+SELECT
+    COALESCE(o.tax_id, sf.sf_account_id)      AS business_key,
+    COALESCE(sf.account_name, o.customer_name) AS finance_account_name,
+    COALESCE(sf.country, o.country)           AS country,
+    sf.segment,
+    /* derive region from country */
+    CASE 
+        WHEN sf.country IN ('United States','Canada') THEN 'AMER'
+        WHEN sf.country IN ('UK','Germany','France') THEN 'EMEA'
+        ELSE 'Other'
+    END AS region,
+    COALESCE(sf.industry, o.customer_class)   AS industry,
+    COALESCE(sf.sales_owner_name, o.salesrep_name) AS sales_owner_name,
+    o.payment_terms
+FROM stg_salesforce.account sf
+FULL OUTER JOIN stg_oracle.customer o
+    ON sf.sf_account_id = o.oracle_cust_id      -- placeholder join logic
+;
+
+🔎 In real life, your join may use mapping tables, domain matching, or manual curation. For now we keep it simple.
+
+Now, use this candidate view to SCD-update dim_account.
+
+Step 1: Insert brand new accounts
+
+INSERT INTO hub.dim_account (
+    finance_account_name,
+    primary_country,
+    tax_id,
+    segment,
+    region,
+    industry,
+    sales_owner_name,
+    payment_terms,
+    is_current,
+    effective_start_dt,
+    effective_end_dt
+)
+SELECT
+    a.finance_account_name,
+    a.country,
+    a.business_key AS tax_id,
+    a.segment,
+    a.region,
+    a.industry,
+    a.sales_owner_name,
+    a.payment_terms,
+    1,
+    CAST(GETUTCDATE() AS DATE),
+    '9999-12-31'
+FROM stg_unified.account a
+LEFT JOIN hub.dim_account d
+    ON d.tax_id = a.business_key
+   AND d.is_current = 1
+WHERE d.account_key IS NULL;
+
+Here I’m using tax_id / business_key as the global identifier. You can substitute whatever your “golden key” is.
+
+Step 2: Type 2 changes for existing accounts
+
+We need to detect when key attributes changed vs current row.
+
+WITH joined AS (
+    SELECT
+        d.account_key,
+        d.tax_id,
+        d.finance_account_name      AS cur_name,
+        d.segment                   AS cur_segment,
+        d.region                    AS cur_region,
+        d.industry                  AS cur_industry,
+        d.sales_owner_name          AS cur_owner,
+        d.payment_terms             AS cur_terms,
+        a.finance_account_name      AS new_name,
+        a.segment                   AS new_segment,
+        a.region                    AS new_region,
+        a.industry                  AS new_industry,
+        a.sales_owner_name          AS new_owner,
+        a.payment_terms             AS new_terms
+    FROM hub.dim_account d
+    JOIN stg_unified.account a
+      ON d.tax_id = a.business_key
+    WHERE d.is_current = 1
+)
+-- 1) Close old row where any SCD2 attribute changed
+UPDATE hub.dim_account
+SET is_current = 0,
+    effective_end_dt = DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE)),
+    updated_utc_dt   = SYSUTCDATETIME()
+WHERE account_key IN (
+    SELECT account_key
+    FROM joined
+    WHERE cur_segment     <> new_segment
+       OR cur_region      <> new_region
+       OR cur_owner       <> new_owner
+       OR cur_terms       <> new_terms
+       OR cur_industry    <> new_industry
+);
+
+-- 2) Insert new row for those changed accounts
+INSERT INTO hub.dim_account (
+    finance_account_name,
+    primary_country,
+    tax_id,
+    segment,
+    region,
+    industry,
+    sales_owner_name,
+    payment_terms,
+    is_current,
+    effective_start_dt,
+    effective_end_dt
+)
+SELECT
+    j.new_name,
+    NULL,                   -- or derive from unified view if you add it
+    j.tax_id,
+    j.new_segment,
+    j.new_region,
+    j.new_industry,
+    j.new_owner,
+    j.new_terms,
+    1,
+    CAST(GETUTCDATE() AS DATE),
+    '9999-12-31'
+FROM joined j
+WHERE j.cur_segment     <> j.new_segment
+   OR j.cur_region      <> j.new_region
+   OR j.cur_owner       <> j.new_owner
+   OR j.cur_terms       <> j.new_terms
+   OR j.cur_industry    <> j.new_industry;
+
+Step 3: Maintain hub.xref_account_system
+
+After your dim_account rows exist, populate mappings:
+
+INSERT INTO hub.xref_account_system (
+    account_key,
+    source_system,
+    source_account_id,
+    is_primary
+)
+SELECT DISTINCT
+    d.account_key,
+    'SALESFORCE' AS source_system,
+    sf.sf_account_id,
+    1 AS is_primary
+FROM hub.dim_account d
+JOIN stg_salesforce.account sf
+  ON d.tax_id = sf.sf_account_id   -- or your mapping logic
+LEFT JOIN hub.xref_account_system x
+  ON x.source_system = 'SALESFORCE'
+ AND x.source_account_id = sf.sf_account_id
+WHERE x.account_key IS NULL;
+
+You’d repeat for ORACLE.
+
+⸻
+
+4️⃣ End-to-End Example (Concrete Scenario)
+
+Let’s walk a tiny story.
+
+Day 1 – Load
+
+Salesforce:
+
+sf_account_id	account_name	country	segment	sales_owner_name
+001A1	Brand X US Parent	US	Enterprise	Alice Smith
+
+Oracle:
+
+oracle_cust_id	customer_name	tax_id	country	customer_class	payment_terms	salesrep_name
+CUST_90001	Brand X USA LLC	TX123	US	Strategic	Net 30	Alice Smith
+
+Your stg_unified.account might produce:
+
+business_key	finance_account_name	country	segment	region	industry	sales_owner_name	payment_terms
+TX123	Brand X USA LLC	US	Enterprise	AMER	Strategic	Alice Smith	Net 30
+
+Result after SCD process:
+
+dim_account
+
+account_key	finance_account_name	primary_country	tax_id	segment	region	sales_owner_name	payment_terms	is_current	eff_start	eff_end
+101	Brand X USA LLC	US	TX123	Enterprise	AMER	Alice Smith	Net 30	1	2025-01-01	9999-12-31
+
+xref_account_system
+
+account_key	source_system	source_account_id	is_primary
+101	SALESFORCE	001A1	1
+101	ORACLE	CUST_90001	0
+
+
+⸻
+
+Day 100 – Sales owner change
+
+Salesforce updates owner → Bob Jones
+Oracle still references Alice, but Finance decides Salesforce is “truth” for owner.
+
+stg_unified.account now:
+
+business_key	finance_account_name	country	segment	region	industry	sales_owner_name	payment_terms
+TX123	Brand X USA LLC	US	Enterprise	AMER	Strategic	Bob Jones	Net 30
+
+When SCD job runs, it sees:
+	•	Segment, region, terms the same.
+	•	Owner changed from Alice → Bob.
+
+Resulting dim_account:
+
+account_key	name	owner	is_current	eff_start	eff_end
+101	Brand X USA LLC	Alice	0	2025-01-01	2025-04-09
+202	Brand X USA LLC	Bob	1	2025-04-10	9999-12-31
+
+Now:
+	•	Bookings from earlier months join to account_key 101 (Alice).
+	•	New bookings join to account_key 202 (Bob).
+	•	FP&A can see metrics by historical owner.
+
+⸻
+
+5️⃣ SSIS View of the Account Framework
+
+At the package level, your Account pipeline might look like:
+
+Project: ETL_Accounts
+	•	DF_SFDC_Account_Raw.dtsx
+	•	Pull from Salesforce → raw_salesforce.account
+	•	DF_Oracle_Customer_Raw.dtsx
+	•	Pull from Oracle → raw_oracle.customer
+	•	DF_SFDC_Account_Stg.dtsx
+	•	RAW → STG (dedupe + standardize)
+	•	DF_Oracle_Customer_Stg.dtsx
+	•	RAW → STG
+	•	DF_Build_StgUnified_Account.dtsx
+	•	SQL Task to refresh stg_unified.account view or table
+	•	DF_SCD_Dim_Account.dtsx
+	•	Execute SQL tasks:
+	•	Insert new accounts
+	•	SCD Type 2 updates
+	•	DF_Update_Account_Mappings.dtsx
+	•	Populate hub.xref_account_system
+
+Then you hang this off your daily “Finance Hub Master” job.
+
+⸻
+
+If you want, next step we can:
+	•	Turn this into a checklist / playbook you could literally use when you join:
+“Account Framework – 10 steps to implement in first 60 days”, or
+	•	Design dim_account + xref specifically for a Pinterest-like ad business
+(including Advertiser vs Agency vs Holding Company hierarchies and “bill-to vs sold-to” handling).
